@@ -9,10 +9,8 @@ from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urljoin, urlparse
 
 import requests
-import torch
 from bs4 import BeautifulSoup
 from PIL import Image as PILImage
-from transformers import pipeline
 from groq import Groq
 
 # --------------------------------------------------------------------------- #
@@ -407,6 +405,8 @@ def analyze_text(client: Groq, article: dict) -> tuple[str, list[tuple[str, str]
 # Part 2: AI-generated image detection (local classifier, no API quota)
 # --------------------------------------------------------------------------- #
 def load_detector():
+    import torch
+    from transformers import pipeline
     device = 0 if torch.cuda.is_available() else -1
     return pipeline("image-classification", model=DETECTOR_MODEL, device=device, use_fast=True)
 
