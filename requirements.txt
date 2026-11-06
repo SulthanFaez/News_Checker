@@ -1,0 +1,7 @@
+streamlit>=1.40
+groq
+requests
+beautifulsoup4
+lxml
+pillow
+ddgs
