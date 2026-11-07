@@ -5,7 +5,20 @@ the model only ever sees short search snippets (a few hundred tokens), never
 whole web pages. Source URLs are attached by this code from the real search
 results, so the model cannot invent a citation.
 
-Flow:  extract claims (LLM) -> search each claim (ddgs) -> judge from snippets (LLM)
+Flow:  extract claims + country (LLM) -> search each claim (ddgs, country-aware,
+       with a relevance check and retries) -> judge from snippets (LLM)
+
+CHANGES vs the previous version (all marked with "# NEW" or "# CHANGED"):
+  1. The claim extractor now also returns the article's country and a few
+     keywords that any relevant search result must mention.
+  2. Queries are told to expand acronyms (MCMC -> full name) and be self-contained.
+  3. Searches use a region (e.g. my-en for Malaysia) instead of the default.
+  4. Each search is checked for relevance. If the results do not mention any
+     keyword, it retries with a reworded query, then without excluding the
+     article's own site.
+  5. Search errors are printed instead of silently swallowed.
+  6. Each claim records "search_ok" so you can separate "search failure" from
+     "genuinely unverifiable" in your evaluation table.
 """
 import json
 import random
@@ -27,7 +40,25 @@ SNIPPET_CHARS = 300                      # per search result sent to the judge
 MAX_COMPLETION_TOKENS = 2500
 MAX_RETRIES = 4
 MAX_WAIT_SECONDS = 60                    # never sleep longer; switch model instead
-SEARCH_WORKERS = 3                       # keep low: DuckDuckGo throttles heavy parallel use
+SEARCH_WORKERS = 2                       # CHANGED: lowered from 3 to be gentler on DuckDuckGo
+SEARCH_PAUSE = 0.7                       # NEW: seconds to wait between search attempts
+
+# NEW: map the country the LLM reports to a DuckDuckGo region code.
+# Anything not listed falls back to "wt-wt" (no region), which is safest for
+# international articles.
+REGION_BY_COUNTRY = {
+    "malaysia": "my-en",
+    "singapore": "sg-en",
+    "united states": "us-en", "usa": "us-en", "us": "us-en",
+    "united kingdom": "uk-en", "uk": "uk-en", "britain": "uk-en",
+    "australia": "au-en",
+    "new zealand": "nz-en",
+    "india": "in-en",
+    "indonesia": "id-en",
+    "philippines": "ph-en",
+    "canada": "ca-en",
+}
+DEFAULT_REGION = "wt-wt"
 
 VERDICTS = ("supported", "contradicted", "mixed", "unverified")
 
@@ -126,37 +157,50 @@ def ask_json(client, prompt: str) -> tuple[dict, str]:
 
 
 # --------------------------------------------------------------------------- #
-# Step 1: extract claims
+# Step 1: extract claims  (CHANGED: also returns country + keywords)
 # --------------------------------------------------------------------------- #
-def extract_claims(client, article: dict) -> tuple[list[dict], str]:
+def extract_claims(client, article: dict) -> tuple[list[dict], str, str]:
     body = "\n\n".join(article["paragraphs"])[:MAX_CONTEXT_CHARS]
     prompt = (
-        f"Article title: {article.get('title')}\n\n"
+        f"Article title: {article.get('title')}\n"
+        f"Article URL: {article.get('url')}\n\n"
         f"Article text:\n{body}\n\n"
         f"Extract the {MAX_CLAIMS} most important CHECKABLE factual claims from this article: "
         "specific statistics, dates, named studies or experiments, historical facts, and "
-        "cause-and-effect statements presented as fact. Skip opinions, advice, and personal anecdotes.\n"
-        'For each claim give: "claim" (self-contained, max 25 words) and "query" '
-        "(a web search query of at most 12 words likely to find evidence about it).\n"
-        'Return ONLY JSON: {"claims": [{"claim": "...", "query": "..."}]}'
+        "cause-and-effect statements presented as fact. Skip opinions, advice, and personal anecdotes.\n\n"
+        "Rules for each claim:\n"
+        '- "claim": a complete, self-contained sentence (max 25 words). Name the organisation, '
+        "place and year in full. Expand acronyms (e.g. write 'Malaysian Communications and "
+        "Multimedia Commission (MCMC)'). No pronouns like 'it' or 'the agency'.\n"
+        '- "query": a web search query of 4 to 12 words, keywords only (not a full sentence). '
+        "Use full names instead of acronyms and include the country or year when relevant.\n"
+        '- "keywords": 2 or 3 distinctive names from the claim (organisation, person, place, study) '
+        "that any genuinely relevant web page would mention.\n\n"
+        'Also give "country": the country the article is mainly about (e.g. "Malaysia"), '
+        'or "" if it is not about one country.\n'
+        'Return ONLY JSON: {"country": "...", "claims": [{"claim": "...", "query": "...", '
+        '"keywords": ["...", "..."]}]}'
     )
     data, model = ask_json(client, prompt)
+
+    country = str(data.get("country") or "").strip()
     claims = []
     for c in (data.get("claims") or [])[:MAX_CLAIMS]:
         if not isinstance(c, dict):
             continue
         claim = str(c.get("claim", "")).strip()
         query = str(c.get("query", "")).strip() or claim
+        keywords = [str(k).strip() for k in (c.get("keywords") or []) if str(k).strip()][:3]
         if claim:
-            claims.append({"claim": claim, "query": query})
-    return claims, model
+            claims.append({"claim": claim, "query": query, "keywords": keywords})
+    return claims, model, country
 
 
 # --------------------------------------------------------------------------- #
-# Step 2: search
+# Step 2: search  (CHANGED: region, relevance check, retries, visible errors)
 # --------------------------------------------------------------------------- #
-def search_one(query: str, exclude_domain: str = "") -> list[dict]:
-    """DuckDuckGo search. Skips the article's own site so results are independent sources."""
+def search_one(query: str, exclude_domain: str = "", region: str = DEFAULT_REGION) -> list[dict]:
+    """DuckDuckGo search in one region. Optionally skips the article's own site."""
     try:
         from ddgs import DDGS
     except ImportError:
@@ -164,7 +208,7 @@ def search_one(query: str, exclude_domain: str = "") -> list[dict]:
 
     for attempt in range(3):
         try:
-            raw = DDGS().text(query, max_results=RESULTS_PER_CLAIM + 4)
+            raw = DDGS().text(query, region=region, max_results=RESULTS_PER_CLAIM + 4)
             out = []
             for r in raw or []:
                 url = r.get("href") or r.get("url") or ""
@@ -181,9 +225,60 @@ def search_one(query: str, exclude_domain: str = "") -> list[dict]:
                 if len(out) >= RESULTS_PER_CLAIM:
                     break
             return out
-        except Exception:
+        except Exception as e:
+            print(f"  Search error (attempt {attempt + 1}, region={region}): {str(e)[:150]}")
+            # If this region code is rejected, fall back to no region on the next try.
+            if region != DEFAULT_REGION and attempt >= 0:
+                region = DEFAULT_REGION
             time.sleep(1.5 * (attempt + 1))
     return []
+
+
+def _is_relevant(results: list[dict], keywords: list[str]) -> bool:
+    """True if at least one result mentions at least one keyword from the claim."""
+    if not results:
+        return False
+    if not keywords:
+        return True  # nothing to check against, so accept what we got
+    blob = " ".join(f"{r['title']} {r['snippet']}" for r in results).lower()
+    return any(k.lower() in blob for k in keywords)
+
+
+def search_claim(c: dict, exclude_domain: str, country: str) -> tuple[list[dict], str, bool]:
+    """Try up to 3 searches for one claim. Returns (results, query_used, search_ok).
+
+    Attempt 1: the LLM's query, in the article's region, excluding the article's own site.
+    Attempt 2: the same query plus the country name.
+    Attempt 3: the full claim sentence, in no region, INCLUDING the article's own site
+               (so a claim about an organisation can still find that organisation's pages).
+    """
+    region = REGION_BY_COUNTRY.get(country.lower(), DEFAULT_REGION)
+    base = c["query"]
+    with_country = base if (not country or country.lower() in base.lower()) else f"{base} {country}"
+
+    attempts = [
+        (base, region, exclude_domain),
+        (with_country, region, exclude_domain),
+        (c["claim"], DEFAULT_REGION, ""),
+    ]
+
+    tried = set()
+    best: tuple[list[dict], str] = ([], base)
+    for query, reg, excl in attempts:
+        key = (query, reg, excl)
+        if key in tried:
+            continue
+        tried.add(key)
+
+        results = search_one(query, excl, reg)
+        if _is_relevant(results, c["keywords"]):
+            return results, query, True
+        if len(results) > len(best[0]):
+            best = (results, query)
+        time.sleep(SEARCH_PAUSE)
+
+    # Nothing passed the relevance check. Return the fullest set we saw, flagged as not ok.
+    return best[0], best[1], False
 
 
 # --------------------------------------------------------------------------- #
@@ -263,6 +358,7 @@ def judge(client, article: dict, claims: list[dict]) -> tuple[list[dict], str, s
             "explanation": str(v.get("explanation", "")).strip() or "No explanation returned.",
             "sources": sources,
             "results": c["results"],
+            "search_ok": c.get("search_ok", False),   # NEW
         })
     overall = data.get("overall")
     overall = overall.strip() if isinstance(overall, str) else ""
@@ -309,21 +405,28 @@ def summarize(judged: list[dict], summary_text: str) -> dict:
 def fact_check(client, article: dict) -> dict:
     """Returns {"claims": [...], "model": str | None, "error": str | None}. Never raises."""
     try:
-        claims, model = extract_claims(client, article)
+        claims, model, country = extract_claims(client, article)   # CHANGED: now returns country
         if not claims:
             return {"claims": [], "model": model, "error": "No checkable factual claims were found."}
 
         domain = urlparse(article.get("url", "")).netloc.lower().removeprefix("www.")
+
+        def run_search(c):
+            return search_claim(c, domain, country)                # CHANGED
+
         with ThreadPoolExecutor(max_workers=SEARCH_WORKERS) as pool:
-            results = list(pool.map(lambda c: search_one(c["query"], domain), claims))
-        for c, r in zip(claims, results):
-            c["results"] = r
+            outcomes = list(pool.map(run_search, claims))
+        for c, (results, query_used, ok) in zip(claims, outcomes):
+            c["results"] = results
+            c["query"] = query_used            # show the query that was actually used
+            c["search_ok"] = ok
 
         judged, model, summary_text = judge(client, article, claims)
         return {
             "claims": judged,
             "overall": summarize(judged, summary_text),
             "model": model,
+            "country": country,                # NEW
             "error": None,
         }
     except Exception as e:
