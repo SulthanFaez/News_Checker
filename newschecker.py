@@ -14,7 +14,7 @@ import article_analyzer_groq as core
 import factcheck_lean as lean
 
 st.set_page_config(
-    page_title="Fact-Check & Image Check",
+    page_title="FactChecked!",
     page_icon="🔎",
     layout="centered",
     initial_sidebar_state="collapsed",
@@ -270,7 +270,7 @@ head_left, head_right = st.columns([12, 1])
 with head_left:
     st.markdown(
         '<div class="hero"><div class="eyebrow">Reading assistant</div>'
-        '<h1>Article <span class="grad">Fact-Check</span> &amp; Image Check</h1>'
+        '<h1>FactChecked!</h1>'
         "<p>Paste an article link. Get its key claims checked against web sources, "
         "plus an AI-generation score for every image.</p></div>",
         unsafe_allow_html=True,
