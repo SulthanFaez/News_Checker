@@ -74,8 +74,8 @@ header[data-testid="stHeader"] { background: transparent !important; }
 }
 [data-testid="stPopover"] button:hover { transform: rotate(40deg); border-color: var(--accent); }
 
-/* Cross-browser robust inputs + Chrome/Firefox textboxes styling */
-.stTextInput div[data-baseweb="base-input"], div[data-baseweb="input"] {
+/* Bulletproof Chrome & Firefox Input & BaseWeb wrappers */
+div.stTextInput > div > div {
   background-color: var(--input-bg) !important;
   border-radius: 12px !important;
   border: 1px solid var(--border) !important;
@@ -95,7 +95,7 @@ header[data-testid="stHeader"] { background: transparent !important; }
   -webkit-box-shadow: 0 0 0 1000px var(--input-bg) inset !important;
   -webkit-text-fill-color: var(--input-text) !important;
 }
-.stTextInput input:focus, div[data-baseweb="input"]:focus-within {
+div.stTextInput > div > div:focus-within {
   border-color: var(--accent) !important;
   box-shadow: 0 0 0 3px rgba(139,92,246,.25) !important;
 }
