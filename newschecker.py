@@ -74,21 +74,30 @@ header[data-testid="stHeader"] { background: transparent !important; }
 }
 [data-testid="stPopover"] button:hover { transform: rotate(40deg); border-color: var(--accent); }
 
-/* Cross-browser robust inputs + textboxes styling */
+/* Cross-browser robust inputs + Chrome/Firefox textboxes styling */
+.stTextInput div[data-baseweb="base-input"], div[data-baseweb="input"] {
+  background-color: var(--input-bg) !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--border) !important;
+}
 .stTextInput input, div[data-baseweb="input"] input {
   border-radius: 12px !important;
   padding: .7rem .9rem !important;
-  border: 1px solid var(--border) !important;
-  background-color: var(--input-bg) !important;
+  border: none !important;
+  background-color: transparent !important;
   color: var(--input-text) !important;
   -webkit-text-fill-color: var(--input-text) !important;
 }
-.stTextInput input:focus, div[data-baseweb="input"] input:focus {
+/* Fix Chrome autofill background override */
+.stTextInput input:-webkit-autofill,
+.stTextInput input:-webkit-autofill:hover,
+.stTextInput input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--input-bg) inset !important;
+  -webkit-text-fill-color: var(--input-text) !important;
+}
+.stTextInput input:focus, div[data-baseweb="input"]:focus-within {
   border-color: var(--accent) !important;
   box-shadow: 0 0 0 3px rgba(139,92,246,.25) !important;
-  background-color: var(--input-bg) !important;
-  color: var(--input-text) !important;
-  -webkit-text-fill-color: var(--input-text) !important;
 }
 
 .stButton > button[kind="primary"] {
@@ -159,9 +168,9 @@ DARK_THEME_CSS = """
     radial-gradient(900px 480px at 100% 0%, rgba(236,72,153,0.12), transparent 60%),
     #0b0d14;
   --card: rgba(255,255,255,0.04);
-  --input-bg: rgba(255, 255, 255, 0.06);
-  --input-text: #f8fafc;
-  --border: rgba(255,255,255,0.10);
+  --input-bg: rgba(255, 255, 255, 0.08);
+  --input-text: #ffffff;
+  --border: rgba(255,255,255,0.12);
   --text-main: #f8fafc;
   --text-sub: #c9cfdd;
   --muted: #9aa3b5;
@@ -170,11 +179,11 @@ DARK_THEME_CSS = """
   --overall-bg: linear-gradient(135deg, rgba(99,102,241,.14), rgba(236,72,153,.06));
   --bar-track: rgba(255,255,255,.08);
 }
-/* Firefox & Chrome specific overrides for popovers/modals in dark mode */
-[data-testid="stPopoverBody"], [data-baseweb="popover"] > div {
+/* Popovers and dropdown containers in dark mode */
+[data-testid="stPopoverBody"], [data-baseweb="popover"] > div, [data-baseweb="menu"] {
   background-color: #0b0d14 !important;
   color: #f8fafc !important;
-  border: 1px solid rgba(255,255,255,0.10) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
 }
 </style>
 """
