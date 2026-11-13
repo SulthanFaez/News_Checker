@@ -23,27 +23,24 @@ st.set_page_config(
 VERDICT_ICONS = {"supported": "✅", "contradicted": "❌", "mixed": "⚠️", "unverified": "❔"}
 
 # --------------------------------------------------------------------------- #
-# Styling (fonts, colours, cards). Edit the variables at the top to re-theme.
+# Styling (fonts, colours, cards). Supports Dark & Light mode via CSS vars.
 # --------------------------------------------------------------------------- #
-CSS = """
+BASE_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
 
 :root {
   --accent: #8b5cf6;
   --accent-2: #6366f1;
-  --bg: #0b0d14;
-  --card: rgba(255,255,255,0.04);
-  --border: rgba(255,255,255,0.10);
-  --muted: #9aa3b5;
-  --good: #22c55e; --bad: #ef4444; --mid: #f59e0b; --none: #94a3b8;
+  --good: #22c55e;
+  --bad: #ef4444;
+  --mid: #f59e0b;
+  --none: #94a3b8;
 }
 
 .stApp {
-  background:
-    radial-gradient(1100px 520px at 8% -8%, rgba(99,102,241,0.20), transparent 60%),
-    radial-gradient(900px 480px at 100% 0%, rgba(236,72,153,0.12), transparent 60%),
-    var(--bg);
+  background: var(--app-bg);
+  color: var(--text-main);
 }
 .stApp, .stMarkdown, p, label, li, input, textarea, button, [data-baseweb="select"] {
   font-family: 'Inter', sans-serif !important;
@@ -62,7 +59,7 @@ header[data-testid="stHeader"] { background: transparent; }
 
 /* hero */
 .hero .eyebrow { color: var(--accent); font-weight: 600; font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; }
-.hero h1 { font-size: 2.5rem; line-height: 1.1; margin: .25rem 0 .5rem 0; font-weight: 700; }
+.hero h1 { font-size: 2.5rem; line-height: 1.1; margin: .25rem 0 .5rem 0; font-weight: 700; color: var(--text-main); }
 .hero h1 .grad { background: linear-gradient(90deg, #a78bfa, #f472b6); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .hero p { color: var(--muted); margin: 0; max-width: 560px; }
 
@@ -70,13 +67,16 @@ header[data-testid="stHeader"] { background: transparent; }
 [data-testid="stPopover"] { display: flex; justify-content: flex-end; }
 [data-testid="stPopover"] > div > button, [data-testid="stPopover"] button {
   border-radius: 999px; width: 46px; height: 46px; padding: 0;
-  border: 1px solid var(--border); background: var(--card); font-size: 1.15rem;
+  border: 1px solid var(--border); background: var(--card); color: var(--text-main); font-size: 1.15rem;
   transition: transform .15s ease, border-color .15s ease;
 }
 [data-testid="stPopover"] button:hover { transform: rotate(40deg); border-color: var(--accent); }
 
 /* inputs + primary button */
-.stTextInput input { border-radius: 12px; padding: .7rem .9rem; border: 1px solid var(--border); background: var(--card); }
+.stTextInput input {
+  border-radius: 12px; padding: .7rem .9rem;
+  border: 1px solid var(--border); background: var(--input-bg); color: var(--text-main);
+}
 .stTextInput input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(139,92,246,.25); }
 .stButton > button[kind="primary"] {
   background: linear-gradient(135deg, var(--accent-2), var(--accent)); border: 0; color: #fff;
@@ -87,15 +87,16 @@ header[data-testid="stHeader"] { background: transparent; }
 
 /* tabs */
 .stTabs [data-baseweb="tab-list"] { gap: .4rem; border-bottom: 1px solid var(--border); }
-.stTabs [data-baseweb="tab"] { font-weight: 600; padding: .6rem 1rem; }
+.stTabs [data-baseweb="tab"] { font-weight: 600; padding: .6rem 1rem; color: var(--muted); }
+.stTabs [data-baseweb="tab"][aria-selected="true"] { color: var(--text-main); }
 
 /* article header */
-.article-title { font-family: 'Space Grotesk', sans-serif; font-size: 1.6rem; font-weight: 700; margin: 1.4rem 0 .15rem 0; letter-spacing: -0.02em; }
+.article-title { font-family: 'Space Grotesk', sans-serif; font-size: 1.6rem; font-weight: 700; margin: 1.4rem 0 .15rem 0; letter-spacing: -0.02em; color: var(--text-main); }
 .article-meta { color: var(--muted); font-size: .9rem; margin-bottom: .6rem; }
 
 /* summary pills */
 .pills { display: flex; flex-wrap: wrap; gap: .5rem; margin: .4rem 0 1rem 0; }
-.pill { padding: .25rem .7rem; border-radius: 999px; border: 1px solid var(--border); background: var(--card); font-size: .85rem; }
+.pill { padding: .25rem .7rem; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text-main); font-size: .85rem; }
 
 /* claim cards */
 .claim { border: 1px solid var(--border); border-left: 4px solid var(--none); background: var(--card);
@@ -109,32 +110,92 @@ header[data-testid="stHeader"] { background: transparent; }
 .badge.contradicted { background: rgba(239,68,68,.15); color: var(--bad); }
 .badge.mixed { background: rgba(245,158,11,.15); color: var(--mid); }
 .num { color: var(--muted); font-size: .78rem; }
-.claim-text { font-family: 'Space Grotesk', sans-serif; font-size: 1.05rem; font-weight: 600; margin-bottom: .35rem; }
-.claim-expl { color: #c9cfdd; font-size: .93rem; line-height: 1.5; }
+.claim-text { font-family: 'Space Grotesk', sans-serif; font-size: 1.05rem; font-weight: 600; margin-bottom: .35rem; color: var(--text-main); }
+.claim-expl { color: var(--text-sub); font-size: .93rem; line-height: 1.5; }
 .chips { margin-top: .65rem; display: flex; flex-wrap: wrap; gap: .4rem; }
 .chip { font-size: .78rem; padding: .2rem .6rem; border-radius: 8px; border: 1px solid var(--border);
-  background: rgba(255,255,255,.03); color: #c4b5fd !important; text-decoration: none !important; }
-.chip:hover { border-color: var(--accent); background: rgba(139,92,246,.12); }
+  background: var(--chip-bg); color: var(--chip-text) !important; text-decoration: none !important; }
+.chip:hover { border-color: var(--accent); background: rgba(139,92,246,.14); }
 .muted { color: var(--muted); font-size: .8rem; }
+
 /* overall summary card */
 .overall { border: 1px solid var(--border); border-radius: 16px; padding: 1.1rem 1.25rem; margin: .6rem 0 1.1rem 0;
-  background: linear-gradient(135deg, rgba(99,102,241,.14), rgba(236,72,153,.06)); }
+  background: var(--overall-bg); }
 .overall-top { display: flex; justify-content: space-between; align-items: center; gap: .6rem; flex-wrap: wrap; }
-.overall-label { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.1rem; }
+.overall-label { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.1rem; color: var(--text-main); }
 .overall-badge { font-size: .82rem; font-weight: 600; padding: .22rem .75rem; border-radius: 999px;
   background: rgba(148,163,184,.15); color: var(--none); }
 .overall-badge.good { background: rgba(34,197,94,.15); color: var(--good); }
 .overall-badge.mid { background: rgba(245,158,11,.15); color: var(--mid); }
 .overall-badge.bad { background: rgba(239,68,68,.15); color: var(--bad); }
-.overall-sum { color: #d5daea; line-height: 1.6; margin: .65rem 0 .9rem 0; }
-.bar { display: flex; height: 8px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,.08); }
+.overall-sum { color: var(--text-sub); line-height: 1.6; margin: .65rem 0 .9rem 0; }
+.bar { display: flex; height: 8px; border-radius: 999px; overflow: hidden; background: var(--bar-track); }
 .seg.supported { background: var(--good); } .seg.contradicted { background: var(--bad); }
 .seg.mixed { background: var(--mid); } .seg.unverified { background: var(--none); }
 .overall .pills { margin: .8rem 0 .2rem 0; }
 .overall-note { color: var(--muted); font-size: .78rem; margin-top: .4rem; }
 </style>
 """
-st.markdown(CSS, unsafe_allow_html=True)
+
+DARK_THEME_CSS = """
+<style>
+:root {
+  color-scheme: dark;
+  --app-bg:
+    radial-gradient(1100px 520px at 8% -8%, rgba(99,102,241,0.20), transparent 60%),
+    radial-gradient(900px 480px at 100% 0%, rgba(236,72,153,0.12), transparent 60%),
+    #0b0d14;
+  --card: rgba(255,255,255,0.04);
+  --input-bg: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.10);
+  --text-main: #f8fafc;
+  --text-sub: #c9cfdd;
+  --muted: #9aa3b5;
+  --chip-bg: rgba(255,255,255,0.03);
+  --chip-text: #c4b5fd;
+  --overall-bg: linear-gradient(135deg, rgba(99,102,241,.14), rgba(236,72,153,.06));
+  --bar-track: rgba(255,255,255,.08);
+}
+</style>
+"""
+
+LIGHT_THEME_CSS = """
+<style>
+:root {
+  color-scheme: light;
+  --app-bg:
+    radial-gradient(1100px 520px at 8% -8%, rgba(99,102,241,0.10), transparent 60%),
+    radial-gradient(900px 480px at 100% 0%, rgba(236,72,153,0.07), transparent 60%),
+    #f8fafc;
+  --card: #ffffff;
+  --input-bg: #ffffff;
+  --border: rgba(15,23,42,0.12);
+  --text-main: #0f172a;
+  --text-sub: #334155;
+  --muted: #64748b;
+  --chip-bg: #f1f5f9;
+  --chip-text: #6d28d9;
+  --overall-bg: linear-gradient(135deg, rgba(99,102,241,.08), rgba(236,72,153,.05));
+  --bar-track: rgba(15,23,42,.08);
+  --good: #16a34a;
+  --bad: #dc2626;
+  --mid: #d97706;
+  --none: #64748b;
+}
+/* Ensure native Streamlit widgets & popovers match light theme */
+[data-testid="stPopoverBody"], [data-baseweb="popover"] > div, [data-baseweb="select"] > div {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+[data-testid="stExpander"] {
+  background-color: #ffffff !important;
+  border-color: rgba(15,23,42,0.12) !important;
+}
+.stMarkdown, .stMarkdown p, .stMarkdown li, [data-testid="stCaptionContainer"] {
+  color: var(--text-sub);
+}
+</style>
+"""
 
 
 # --------------------------------------------------------------------------- #
@@ -279,6 +340,9 @@ with head_left:
 with head_right:
     with st.popover("⚙️"):
         st.markdown("**Settings**")
+        light_mode = st.toggle("Light mode", value=False, key="light_mode")
+        st.divider()
+
         if hasattr(core, "MAX_WAIT_SECONDS") and hasattr(lean, "SEARCH_WORKERS"):
             st.caption("✅ Latest module files loaded")
         else:
@@ -319,6 +383,9 @@ with head_right:
             "Image detector model",
             ["umm-maybe/AI-image-detector", "Organika/sdxl-detector"],
         )
+
+# Inject base styles + active theme (Dark by default, Light when toggled on)
+st.markdown(BASE_CSS + (LIGHT_THEME_CSS if light_mode else DARK_THEME_CSS), unsafe_allow_html=True)
 
 # --------------------------------------------------------------------------- #
 # Input row
