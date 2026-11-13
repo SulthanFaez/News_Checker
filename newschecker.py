@@ -75,7 +75,7 @@ header[data-testid="stHeader"] { background: transparent; }
 /* inputs + primary button */
 .stTextInput input {
   border-radius: 12px; padding: .7rem .9rem;
-  border: 1px solid var(--border); background: var(--input-bg); color: var(--text-main);
+  border: 1px solid var(--border); background: var(--input-bg); color: var(--input-text) !important;
 }
 .stTextInput input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(139,92,246,.25); }
 .stButton > button[kind="primary"] {
@@ -147,6 +147,7 @@ DARK_THEME_CSS = """
     #0b0d14;
   --card: rgba(255,255,255,0.04);
   --input-bg: rgba(255,255,255,0.04);
+  --input-text: #f8fafc;
   --border: rgba(255,255,255,0.10);
   --text-main: #f8fafc;
   --text-sub: #c9cfdd;
@@ -169,6 +170,7 @@ LIGHT_THEME_CSS = """
     #f8fafc;
   --card: #ffffff;
   --input-bg: #ffffff;
+  --input-text: #0f172a;
   --border: rgba(15,23,42,0.12);
   --text-main: #0f172a;
   --text-sub: #334155;
