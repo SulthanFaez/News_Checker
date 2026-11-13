@@ -74,12 +74,23 @@ header[data-testid="stHeader"] { background: transparent !important; }
 }
 [data-testid="stPopover"] button:hover { transform: rotate(40deg); border-color: var(--accent); }
 
-/* inputs + primary button */
-.stTextInput input {
-  border-radius: 12px; padding: .7rem .9rem;
-  border: 1px solid var(--border); background: var(--input-bg); color: var(--input-text) !important;
+/* Cross-browser robust inputs + textboxes styling */
+.stTextInput input, div[data-baseweb="input"] input {
+  border-radius: 12px !important;
+  padding: .7rem .9rem !important;
+  border: 1px solid var(--border) !important;
+  background-color: var(--input-bg) !important;
+  color: var(--input-text) !important;
+  -webkit-text-fill-color: var(--input-text) !important;
 }
-.stTextInput input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(139,92,246,.25); }
+.stTextInput input:focus, div[data-baseweb="input"] input:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(139,92,246,.25) !important;
+  background-color: var(--input-bg) !important;
+  color: var(--input-text) !important;
+  -webkit-text-fill-color: var(--input-text) !important;
+}
+
 .stButton > button[kind="primary"] {
   background: linear-gradient(135deg, var(--accent-2), var(--accent)); border: 0; color: #fff;
   border-radius: 12px; font-weight: 600; padding: .6rem 1.6rem;
@@ -148,7 +159,7 @@ DARK_THEME_CSS = """
     radial-gradient(900px 480px at 100% 0%, rgba(236,72,153,0.12), transparent 60%),
     #0b0d14;
   --card: rgba(255,255,255,0.04);
-  --input-bg: rgba(255,255,255,0.04);
+  --input-bg: rgba(255, 255, 255, 0.06);
   --input-text: #f8fafc;
   --border: rgba(255,255,255,0.10);
   --text-main: #f8fafc;
@@ -159,7 +170,7 @@ DARK_THEME_CSS = """
   --overall-bg: linear-gradient(135deg, rgba(99,102,241,.14), rgba(236,72,153,.06));
   --bar-track: rgba(255,255,255,.08);
 }
-/* Firefox specific overrides for popovers/modals in dark mode */
+/* Firefox & Chrome specific overrides for popovers/modals in dark mode */
 [data-testid="stPopoverBody"], [data-baseweb="popover"] > div {
   background-color: #0b0d14 !important;
   color: #f8fafc !important;
@@ -192,7 +203,7 @@ LIGHT_THEME_CSS = """
   --mid: #d97706;
   --none: #64748b;
 }
-/* Ensure native Streamlit widgets & popovers match light theme */
+/* Ensure native Streamlit widgets & popovers match light theme & Firefox legibility */
 [data-testid="stPopoverBody"], [data-baseweb="popover"] > div, [data-baseweb="select"] > div {
   background-color: #ffffff !important;
   color: #0f172a !important;
@@ -201,8 +212,8 @@ LIGHT_THEME_CSS = """
   background-color: #ffffff !important;
   border-color: rgba(15,23,42,0.12) !important;
 }
-.stMarkdown, .stMarkdown p, .stMarkdown li, [data-testid="stCaptionContainer"] {
-  color: var(--text-sub);
+.stMarkdown, .stMarkdown p, .stMarkdown li, [data-testid="stCaptionContainer"], label, .stCheckbox span, .stRadio span {
+  color: #334155 !important;
 }
 </style>
 """
