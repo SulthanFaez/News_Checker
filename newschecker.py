@@ -173,7 +173,7 @@ DARK_THEME_CSS = """
   --border: rgba(255,255,255,0.12);
   --text-main: #f8fafc;
   --text-sub: #c9cfdd;
-  --muted: #9aa3b5;
+  --muted: #e2e8f0;
   --chip-bg: rgba(255,255,255,0.03);
   --chip-text: #c4b5fd;
   --overall-bg: linear-gradient(135deg, rgba(99,102,241,.14), rgba(236,72,153,.06));
@@ -181,9 +181,17 @@ DARK_THEME_CSS = """
 }
 /* Popovers and dropdown containers in dark mode */
 [data-testid="stPopoverBody"], [data-baseweb="popover"] > div, [data-baseweb="menu"] {
-  background-color: #0b0d14 !important;
+  background-color: #121520 !important;
   color: #f8fafc !important;
-  border: 1px solid rgba(255,255,255,0.12) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+}
+/* Ensure all labels, toggles, captions, and texts inside popovers are clearly visible */
+[data-testid="stPopoverBody"] label, 
+[data-testid="stPopoverBody"] p, 
+[data-testid="stPopoverBody"] span, 
+[data-testid="stPopoverBody"] div, 
+[data-testid="stPopoverBody"] .stCaptionContainer {
+  color: #f1f5f9 !important;
 }
 </style>
 """
