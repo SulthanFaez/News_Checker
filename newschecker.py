@@ -38,10 +38,12 @@ BASE_CSS = """
   --none: #94a3b8;
 }
 
-.stApp {
-  background: var(--app-bg);
-  color: var(--text-main);
+/* Cross-browser container backgrounds for Chrome & Firefox */
+.stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
+  background: var(--app-bg) !important;
+  color: var(--text-main) !important;
 }
+
 .stApp, .stMarkdown, p, label, li, input, textarea, button, [data-baseweb="select"] {
   font-family: 'Inter', sans-serif !important;
 }
@@ -54,7 +56,7 @@ h1, h2, h3, h4, .hero h1, .stTabs [data-baseweb="tab"] {
 
 /* hide default chrome */
 #MainMenu, footer, [data-testid="stSidebar"], [data-testid="collapsedControl"] { display: none !important; }
-header[data-testid="stHeader"] { background: transparent; }
+header[data-testid="stHeader"] { background: transparent !important; }
 .block-container { max-width: 980px; padding-top: 2.2rem; padding-bottom: 4rem; }
 
 /* hero */
@@ -156,6 +158,12 @@ DARK_THEME_CSS = """
   --chip-text: #c4b5fd;
   --overall-bg: linear-gradient(135deg, rgba(99,102,241,.14), rgba(236,72,153,.06));
   --bar-track: rgba(255,255,255,.08);
+}
+/* Firefox specific overrides for popovers/modals in dark mode */
+[data-testid="stPopoverBody"], [data-baseweb="popover"] > div {
+  background-color: #0b0d14 !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
 }
 </style>
 """
